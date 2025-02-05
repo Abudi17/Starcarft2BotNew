@@ -216,17 +216,14 @@ class HauptBot(BotAI):
             logging.error(f"Fehler während der Verzögerung: {e}")
 
     # Das hier ist für die Grundstruktur, also damit etwas deff und Gebäude am Spielbeginn vorhanden sind, um Entscheidungen trffen zu können
-    ### So wie ich hier verstanden habe geht es darum, mit if statements die Grundstruktur aufzubauen. Dies erfolgt noch nicht über CBR!
     async def build_initial_structure(self):
         """Baut die Grundstruktur für Protoss und sorgt für Ressourcenmanagement."""
         # Überprüfen, ob ein Nexus vorhanden ist. Falls nicht, baue einen neuen Nexus.
         if self.townhalls:  # Sicherstellen, dass wir eine Nexus-Basis haben
-            
             nexus = self.townhalls.random  # Wähle einen zufälligen Nexus für die Aktionen
 
             # 1. Arbeiter trainieren, falls benötigt (Es werden bei der Gundstruktur extra 2 Weniger als Möglich angegeben, da es somit im Verlauf optimal ist)
             optimal_workers = len(self.townhalls) * 19
-
             if self.workers.amount < optimal_workers and nexus.is_idle and self.can_afford(UnitTypeId.PROBE):
                 nexus.train(UnitTypeId.PROBE)
 
@@ -520,7 +517,7 @@ try:
     maps.get("AcropolisLE"),
     [Bot(Race.Protoss, HauptBot(HOST, PORT)), 
     Computer(Race.Terran, Difficulty.Easy)],
-    realtime=True
+    realtime=False
 )
 except aiohttp.client_exceptions.ClientConnectionError:
     print("Verbindung wurde geschlossen, vermutlich Spielabbruch.")
