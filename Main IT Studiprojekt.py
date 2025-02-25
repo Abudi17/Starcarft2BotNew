@@ -204,10 +204,10 @@ class HauptBot(BotAI):
 
             # Log-Nachricht einmalig ausgeben
             if not self.log_message_shown:
-                logging.info("Verzögerung gestartet: Warte 40 Sekunden, um die Grundstrucktur zu bauen.")
+                logging.info("Verzögerung gestartet: Warte 10 Sekunden, um die Grundstrucktur zu bauen.")
                 self.log_message_shown = True  # Flag setzen, damit die Nachricht nicht erneut ausgegeben wird
 
-            await asyncio.sleep(40)
+            await asyncio.sleep(10)
 
             # Nach der Verzögerung
             self.initial_structure_built = True
@@ -370,6 +370,25 @@ class HauptBot(BotAI):
             logging.debug("Arbeiter wird trainiert.")
             for sg in self.structures(UnitTypeId.NEXUS).ready.idle:
                 sg.train(UnitTypeId.PROBE)
+            
+            # Sicherstellen, dass der Assimilator besetzt wird, wenn er gebaut wurde
+            for assimilator in self.structures(UnitTypeId.ASSIMILATOR).ready:
+                needed_harvesters = 3
+                current_harvesters = assimilator.assigned_harvesters
+                missing_harvesters = needed_harvesters - current_harvesters
+
+                if missing_harvesters > 0:
+                            # Zuerst versuchen, freie Arbeiter zuzuweisen
+                    idle_workers = self.workers.idle
+                    for _ in range(missing_harvesters):
+                        if idle_workers.exists:
+                            idle_workers.random.gather(assimilator)
+                        else:
+                            # Wenn keine untätigen Arbeiter verfügbar sind, Arbeiter von Mineralien abziehen
+                            mineral_workers = self.workers.gathering
+                            if mineral_workers.exists:
+                                mineral_workers.random.gather(assimilator)
+
 
     # Lufttuppen
     async def troup_Voidray(self):
@@ -511,7 +530,8 @@ def collect_game_state(bot, iteration):
         "supplyUsed": bot.supply_used,
         "supplyCap": bot.supply_cap,
         "forge": bot.structures(UnitTypeId.FORGE).amount,
-        "sentry": bot.structures(UnitTypeId.SENTRY).amount
+        "sentry": bot.structures(UnitTypeId.SENTRY).amount,
+        "assimilator": bot.structures(UnitTypeId.ASSIMILATOR).amount,
     }
 
 # === Spiel starten ===
