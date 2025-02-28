@@ -129,7 +129,7 @@ class HauptBot(BotAI):
 
         if self.initial_structure_completed:
             # Es wird eine Höhere Iteration gebraucht, damit er nicht 20 Fälle gleichzeitig ausführt und den gebäuden erstmal zeit gibt bis die fertig sind
-            if iteration % 125 == 0:
+            if iteration % 25 == 0:
                 # Spielstatus sammeln und senden
                 game_state = collect_game_state(self, iteration)
                 logging.info(f"{json.dumps(game_state, ensure_ascii=False)}")
@@ -191,6 +191,9 @@ class HauptBot(BotAI):
                     elif category == "attack_Sentry_Voidray":
                         logging.info("Kombinierter Angriff: Sentry und Voidray!")
                         await self.attack_Sentry_Voidray()
+                    elif category == "troup_Worker_Assimilator":
+                        logging.info("Weise Arbeitern den Assimilatoren zu!")
+                        await self.troup_Worker_Assimilator()
                     else:
                         logging.info(f"Unbekannte Kategorie: {category}")
                 else:
@@ -207,7 +210,7 @@ class HauptBot(BotAI):
                 logging.info("Verzögerung gestartet: Warte 10 Sekunden, um die Grundstrucktur zu bauen.")
                 self.log_message_shown = True  # Flag setzen, damit die Nachricht nicht erneut ausgegeben wird
 
-            await asyncio.sleep(10)
+            # await asyncio.sleep(10)
 
             # Nach der Verzögerung
             self.initial_structure_built = True
@@ -327,7 +330,7 @@ class HauptBot(BotAI):
         if self.townhalls:  # Sicherstellen, dass wir eine Nexus-Basis haben
             nexus = self.townhalls.random
         
-            if self.structures(UnitTypeId.PYLON).ready and self.structures(UnitTypeId.GATEWAY).ready:
+            if self.structures(UnitTypeId.PYLON).ready:
                     for vespene in self.vespene_geyser.closer_than(15, nexus):
                         # Überprüfen, ob der Geysir bereits genutzt wird
                         if not self.structures(UnitTypeId.ASSIMILATOR).closer_than(1, vespene) and not self.already_pending(UnitTypeId.ASSIMILATOR):
@@ -371,8 +374,10 @@ class HauptBot(BotAI):
             for sg in self.structures(UnitTypeId.NEXUS).ready.idle:
                 sg.train(UnitTypeId.PROBE)
             
-            # Sicherstellen, dass der Assimilator besetzt wird, wenn er gebaut wurde
-            for assimilator in self.structures(UnitTypeId.ASSIMILATOR).ready:
+
+    async def troup_Worker_Assimilator(self):
+        print("Wenn dieser Fall auftritt, sollen Arbeiter zu Assimilator eingeteilt werden.")#
+        for assimilator in self.structures(UnitTypeId.ASSIMILATOR).ready:
                 needed_harvesters = 3
                 current_harvesters = assimilator.assigned_harvesters
                 missing_harvesters = needed_harvesters - current_harvesters
@@ -441,7 +446,7 @@ class HauptBot(BotAI):
         print("Wenn das Fall greifen Voidrays den Gegner an, dann soll er hier rein.")
         """Steuert Voidrays für Angriffe oder Erkundung."""
         voidrays = self.units(UnitTypeId.VOIDRAY).idle
-        if voidrays.amount > 3:
+        if voidrays.amount > 2:
             logging.debug("Voidrays agieren!")
             for vr in voidrays:
                 enemy_units = self.enemy_units | self.enemy_structures
@@ -531,8 +536,10 @@ def collect_game_state(bot, iteration):
         "supplyCap": bot.supply_cap,
         "forge": bot.structures(UnitTypeId.FORGE).amount,
         "sentry": bot.structures(UnitTypeId.SENTRY).amount,
-        "assimilator": bot.structures(UnitTypeId.ASSIMILATOR).amount,
+        "assimilator": bot.structures(UnitTypeId.ASSIMILATOR).ready.amount,
+        "totalAssimilatorHarvesters": sum(a.assigned_harvesters for a in bot.structures(UnitTypeId.ASSIMILATOR).ready)
     }
+
 
 # === Spiel starten ===
 try: 
@@ -540,7 +547,7 @@ try:
     maps.get("AcropolisLE"),
     [Bot(Race.Protoss, HauptBot(HOST, PORT)), 
     Computer(Race.Terran, Difficulty.Easy)],
-    realtime=True
+    realtime=False
 )
 except aiohttp.client_exceptions.ClientConnectionError:
     print("Verbindung wurde geschlossen, vermutlich Spielabbruch.")
