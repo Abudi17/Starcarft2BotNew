@@ -398,20 +398,29 @@ class HauptBot(BotAI):
             for sg in self.structures(UnitTypeId.GATEWAY).ready.idle:
                 sg.train(UnitTypeId.ZEALOT)
 
+        # Alle neuen Zealots zur Rampe schicken
+        for zealot in self.units(UnitTypeId.ZEALOT).idle:
+            zealot.move(self.main_base_ramp.top_center)
+
     async def troup_Stalker(self):
         print("In diesem Fall soll ein Stalker erschaffen werden")
         if self.can_afford(UnitTypeId.STALKER):
             logging.debug("Stalker wird trainiert.")
             for sg in self.structures(UnitTypeId.GATEWAY).ready.idle:
                 sg.train(UnitTypeId.STALKER)
-                
+
+
+        # Alle neuen Stalker zur Rampe schicken
+        for stalker in self.units(UnitTypeId.STALKER).idle:
+            stalker.move(self.main_base_ramp.top_center)
+                    
     
 
 ##### Attack Methoden:      
     async def attack_Zealot(self):
         print("Wenn dieser Fall eintritt, sollen die Zealots zum Angriff übergehen.")
         zealots = self.units(UnitTypeId.ZEALOT).idle
-        if zealots.amount > 20:
+        if zealots.amount > 10:
             logging.debug("Zealots Angreifen!")
             for z in zealots:
                 enemy_units = self.enemy_units | self.enemy_structures
@@ -438,21 +447,28 @@ class HauptBot(BotAI):
     
     async def attack_Zealots_Stalker(self):
         print("Wenn dieser Fall eintritt, sollen die Zealots und Stalker zum Angriff übergehen.")
-        zealots = self.units(UnitTypeId.ZEALOT).idle
-        stalker = self.units(UnitTypeId.STALKER).idle
-        if zealots.amount > 20 and stalker.amount > 10:
-            logging.debug("Zealots und Stalker Angreifen!")
-            for z, s in zealots, stalker:
-                enemy_units = self.enemy_units | self.enemy_structures
-                if enemy_units:
-                    target = enemy_units.closest_to(z)
-                    target2 = enemy_units.closest_to(s)
-                    z.attack(target)
-                    s.attack(target2)
-                else:
-                    explore_point = self.random_location_variance(self.enemy_start_locations[0])
-                    z.attack(explore_point)
-                    s.attack(explore_point)
+        
+        # ALLE Zealots und Stalker in die Angriffswelle aufnehmen
+        zealots = self.units(UnitTypeId.ZEALOT)
+        stalkers = self.units(UnitTypeId.STALKER)
+
+        if zealots.amount > 10 and stalkers.amount > 10:
+            logging.debug("Zealots und Stalker greifen an!")
+
+            enemy_units = self.enemy_units | self.enemy_structures
+
+            if enemy_units:
+                # Angriff auf den nächsten Gegner
+                target = enemy_units.closest_to(zealots.center) if zealots else enemy_units.closest_to(stalkers.center)
+                for unit in zealots + stalkers:
+                    unit.attack(target)
+            else:
+                # Falls keine Gegner gefunden werden, erkunden
+                explore_point = self.random_location_variance(self.enemy_start_locations[0])
+                for unit in zealots + stalkers:
+                    unit.attack(explore_point)
+
+
 
 #####################################################################
 
@@ -484,7 +500,7 @@ try:
     maps.get("AcropolisLE"),
     [Bot(Race.Protoss, HauptBot(HOST, PORT)), 
     Computer(Race.Terran, Difficulty.Easy)],
-    realtime=True
+    realtime=False
 )
 except aiohttp.client_exceptions.ClientConnectionError:
     print("Verbindung wurde geschlossen, vermutlich Spielabbruch.")
