@@ -486,11 +486,13 @@ def collect_game_state(bot, iteration):
         "cyberneticsCores": bot.structures(UnitTypeId.CYBERNETICSCORE).amount,
         "supplyUsed": bot.supply_used,
         "supplyCap": bot.supply_cap,
-        "assimilator": bot.structures(UnitTypeId.ASSIMILATOR).ready.amount,
+        "assimilator": bot.structures(UnitTypeId.ASSIMILATOR).amount,
         "totalAssimilatorHarvesters": sum(a.assigned_harvesters for a in bot.structures(UnitTypeId.ASSIMILATOR).ready),
         "zealot" : bot.units(UnitTypeId.ZEALOT).amount,
         "stalker" : bot.units(UnitTypeId.STALKER).amount,
         "supplyDifferenceUsedCap" : bot.supply_cap - bot.supply_used,
+        "nexusWorker" : sum(nexus.assigned_harvesters for nexus in bot.structures(UnitTypeId.NEXUS).ready),
+        "nexusTrainingStatus": int(any(nexus.orders for nexus in bot.structures(UnitTypeId.NEXUS).ready))
     }
 
 
