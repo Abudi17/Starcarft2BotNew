@@ -146,9 +146,9 @@ class HauptBot(BotAI):
                     if category == "build_Nexus":
                         logging.info("Nexus wird gebaut!")
                         await self.build_Nexus()
-                    elif (self.supply_cap - self.supply_used) < 5:
-                        logging.info("Baue Pylon, da sonst kein weiteres Vorgehen möglich!")
-                        await self.build_Pylon()
+                    # elif (self.supply_cap - self.supply_used) < 5:
+                    #    logging.info("Baue Pylon, da sonst kein weiteres Vorgehen möglich!")
+                    #    await self.build_Pylon()
                     elif category == "build_Pylon":
                         logging.info("Pylon wird gebaut!")
                         await self.build_Pylon()
@@ -167,30 +167,24 @@ class HauptBot(BotAI):
                     elif category == "build_Forge":
                         logging.info("Forge wird gebaut!")
                         await self.build_Forge()
-                    elif category == "deff_PhotonCannon":
-                        logging.info("Photonengeschütz wird gebaut!")
-                        await self.deff_PhotonCannon()
                     elif category == "troup_Worker":
                         logging.info("Arbeiter werden ausgebildet!")
                         await self.troup_Worker()
-                    elif category == "troup_Voidray":
-                        logging.info("Voidray wird ausgebildet!")
-                        await self.troup_Voidray()
-                    elif category == "troup_Sentry":
-                        logging.info("Sentry wird ausgebildet!")
-                        await self.troup_Sentry()
-                    elif category == "deff_Sentry":
-                        logging.info("Sentry wird zur Verteidigung eingesetzt!")
-                        await self.deff_Sentry()
-                    elif category == "attack_Voidray":
-                        logging.info("Voidray greift an!")
-                        await self.attack_Voidray()
-                    elif category == "attack_Sentry":
-                        logging.info("Sentry greift an!")
-                        await self.attack_Sentry()
-                    elif category == "attack_Sentry_Voidray":
-                        logging.info("Kombinierter Angriff: Sentry und Voidray!")
-                        await self.attack_Sentry_Voidray()
+                    elif category == "troup_Zealot":
+                        logging.info("Zealot wird ausgebildet!")
+                        await self.troup_Zealot()
+                    elif category == "troup_Stalker":
+                        logging.info("Stalker wird ausgebildet!")
+                        await self.troup_Stalker()
+                    elif category == "attack_Zealot":
+                        logging.info("Zealot greift an!")
+                        await self.attack_Zealot()
+                    elif category == "attack_Stalker":
+                        logging.info("Stalker greift an!")
+                        await self.attack_Stalker()
+                    elif category == "attack_Zealot_Stalker":
+                        logging.info("Kombinierter Angriff: Zealot und Stalker!")
+                        await self.attack_Zealots_Stalker()
                     elif category == "troup_Worker_Assimilator":
                         logging.info("Weise Arbeitern den Assimilatoren zu!")
                         await self.troup_Worker_Assimilator()
@@ -321,7 +315,7 @@ class HauptBot(BotAI):
         if self.townhalls:  # Sicherstellen, dass wir eine Nexus-Basis haben
             nexus = self.townhalls.random
 
-            if self.structures(UnitTypeId.PYLON).ready and not self.structures(UnitTypeId.GATEWAY) and self.can_afford(UnitTypeId.GATEWAY):
+            if self.structures(UnitTypeId.PYLON).ready and self.can_afford(UnitTypeId.GATEWAY):
                 gateway_position = nexus.position.towards(self.game_info.map_center, distance=12)
                 await self.build(UnitTypeId.GATEWAY, near=gateway_position)
 
@@ -395,127 +389,72 @@ class HauptBot(BotAI):
                                 mineral_workers.random.gather(assimilator)
 
 
-    # Lufttuppen
-    async def troup_Voidray(self):
-        print("Wenn das Fall Baue Voidray (Phasengleiter), dann soll er hier rein.")
-        # **Voidrays trainieren, wenn genug Ressourcen vorhanden sind**
-        if self.can_afford(UnitTypeId.VOIDRAY) and self.units(UnitTypeId.VOIDRAY).amount < 10:
-            logging.debug("Voidray wird trainiert.")
-            for sg in self.structures(UnitTypeId.STARGATE).ready.idle:
-                sg.train(UnitTypeId.VOIDRAY)
+    # Bodentruppen:
 
-    # Bodentruppen 
-    async def troup_Sentry(self):
-        print("Wenn das Fall Baue Protector, dann soll er hier rein.")
-        # **Protektor trainieren, wenn genug Ressourcen vorhanden sind**
-        if self.can_afford(UnitTypeId.SENTRY) and self.units(UnitTypeId.SENTRY).amount < 10:
-            logging.debug("ProteKtor wird trainiert.")
+    async def troup_Zealot(self):
+        print("In diesem Fall soll ein Zealot erschaffen werden")
+        if self.can_afford(UnitTypeId.ZEALOT):
+            logging.debug("Zealot wird trainiert.")
             for sg in self.structures(UnitTypeId.GATEWAY).ready.idle:
-                sg.train(UnitTypeId.SENTRY)
+                sg.train(UnitTypeId.ZEALOT)
 
-##### Defense Methoden:
-    async def deff_PhotonCannon(self):
-        print("Wenn das Fall Baue Photonenkanone, dann soll er hier rein.")
-        if self.townhalls:  # Sicherstellen, dass wir eine Nexus-Basis haben
-            nexus = self.townhalls.random   
-            # Photon Cannons bauen
-            if self.structures(UnitTypeId.FORGE).ready:
-                cannon_count = self.structures(UnitTypeId.PHOTONCANNON).amount
-                while cannon_count < 1 and self.can_afford(UnitTypeId.PHOTONCANNON):
-                    cannon_position = await self.find_placement(UnitTypeId.PHOTONCANNON,
-                        near=nexus.position, max_distance=15,
-                        random_alternative=True)
-                    if cannon_position:
-                        await self.build(UnitTypeId.PHOTONCANNON, near=cannon_position)
-                        cannon_count += 1
-                    else:
-                        break
-
-    #Hier muss ich dann nochmal schauen, ob ich welche ausbilden muss oder ob ich dann die wenn von oeben nehmen kann
-    async def deff_Sentry(self):
-        print("wenn das der Fall ist werden Sentry zur Verteidigung in der Basis abgestellt")      
-        # Sentry ausbilden und in der Basis abstellen
-        if self.can_afford(UnitTypeId.SENTRY) and self.units(UnitTypeId.SENTRY).amount <= 3:
-            logging.debug("ProteKtor wird trainiert.")
+    async def troup_Stalker(self):
+        print("In diesem Fall soll ein Stalker erschaffen werden")
+        if self.can_afford(UnitTypeId.STALKER):
+            logging.debug("Stalker wird trainiert.")
             for sg in self.structures(UnitTypeId.GATEWAY).ready.idle:
-                sg.train(UnitTypeId.SENTRY)
-                sg.position.towards(self.game_info.map_center, distance=15)
+                sg.train(UnitTypeId.STALKER)
+                
+    
 
-##### Attack Methoden:
-    async def attack_Voidray(self):
-        print("Wenn das Fall greifen Voidrays den Gegner an, dann soll er hier rein.")
-        """Steuert Voidrays für Angriffe oder Erkundung."""
-        voidrays = self.units(UnitTypeId.VOIDRAY).idle
-        if voidrays.amount > 2:
-            logging.debug("Voidrays agieren!")
-            for vr in voidrays:
+##### Attack Methoden:      
+    async def attack_Zealot(self):
+        print("Wenn dieser Fall eintritt, sollen die Zealots zum Angriff übergehen.")
+        zealots = self.units(UnitTypeId.ZEALOT).idle
+        if zealots.amount > 20:
+            logging.debug("Zealots Angreifen!")
+            for z in zealots:
                 enemy_units = self.enemy_units | self.enemy_structures
                 if enemy_units:
-                    target = enemy_units.closest_to(vr)
-                    vr.attack(target)
+                    target = enemy_units.closest_to(z)
+                    z.attack(target)
                 else:
-                    # Kein Gegner in Sicht - Karte erkunden
                     explore_point = self.random_location_variance(self.enemy_start_locations[0])
-                    vr.attack(explore_point)
-
-    async def attack_Sentry(self):
-        print("Wenn das Fall greifen Protektor den Gegner an, dann soll er hier rein.")    
-        """Steuert Protektor für Angriffe oder Erkundung."""
-        sentry = self.units(UnitTypeId.SENTRY).idle
-        if sentry.amount > 3:
-            logging.debug("Protektor agieren!")
-            for st in sentry:
+                    z.attack(explore_point)
+    
+    async def attack_Stalker(self):
+        print("Wenn dieser Fall eintritt, sollen die Stalker zum Angriff übergehen.")
+        stalker = self.units(UnitTypeId.STALKER).idle
+        if stalker.amount > 10:
+            logging.debug("Zealots Angreifen!")
+            for s in stalker:
                 enemy_units = self.enemy_units | self.enemy_structures
                 if enemy_units:
-                    target = enemy_units.closest_to(st)
-                    st.attack(target)
+                    target = enemy_units.closest_to(s)
+                    s.attack(target)
                 else:
-                    # Kein Gegner in Sicht - Karte erkunden
                     explore_point = self.random_location_variance(self.enemy_start_locations[0])
-                    st.attack(explore_point)
-
-    async def attack_Sentry_Voidray(self):
-        sentry = self.units(UnitTypeId.SENTRY).idle
-        voidray = self.units(UnitTypeId.VOIDRAY).idle
-        if sentry.amount > 3 & voidray.amount > 3:
-            logging.debug("Protektor und Voidray agieren gemeinsam!")
-            
-            for st, vr in sentry, voidray:
+                    s.attack(explore_point)
+    
+    async def attack_Zealots_Stalker(self):
+        print("Wenn dieser Fall eintritt, sollen die Zealots und Stalker zum Angriff übergehen.")
+        zealots = self.units(UnitTypeId.ZEALOT).idle
+        stalker = self.units(UnitTypeId.STALKER).idle
+        if zealots.amount > 20 and stalker.amount > 10:
+            logging.debug("Zealots und Stalker Angreifen!")
+            for z, s in zealots, stalker:
                 enemy_units = self.enemy_units | self.enemy_structures
                 if enemy_units:
-                    target = enemy_units.closest_to(st)
-                    st.attack(target)
-                    vr.attack(target)
+                    target = enemy_units.closest_to(z)
+                    target2 = enemy_units.closest_to(s)
+                    z.attack(target)
+                    s.attack(target2)
                 else:
-                    # Kein Gegner in Sicht - Karte erkunden
                     explore_point = self.random_location_variance(self.enemy_start_locations[0])
-                    st.attack(explore_point)
-                    vr.attack(explore_point)
+                    z.attack(explore_point)
+                    s.attack(explore_point)
 
 #####################################################################
-    # Das hier kann ich wenn lassen als Angriffslog
-    async def manage_voidrays(self):
-        """Steuert Voidrays für Angriffe oder Erkundung."""
-        voidrays = self.units(UnitTypeId.VOIDRAY).idle
-        if voidrays.amount > 3:
-            logging.debug("Voidrays agieren!")
-            for vr in voidrays:
-                enemy_units = self.enemy_units | self.enemy_structures
-                if enemy_units:
-                    target = enemy_units.closest_to(vr)
-                    vr.attack(target)
-                else:
-                    # Kein Gegner in Sicht - Karte erkunden
-                    explore_point = self.random_location_variance(self.enemy_start_locations[0])
-                    vr.attack(explore_point)
-
-    # Muss ich gucken, ob ich das noch brauche bzw. wie ich das verwenden kann. Sucht einen geeigneten Platz zum bauen von Gebäuden
-    # Wird aktuell nicht verwendet
-    async def find_location(self, unit_type, near):
-        """Findet einen geeigneten Bauort für das Gebäude und Truppen."""
-        placement = await self.find_placement(unit_type, near=near)
-        # Wenn Platz gefunden wurde, prüfen, ob er sinnvoll ist
-        return placement if placement else None
 
 # === Hilfsfunktionen ===
 def collect_game_state(bot, iteration):
@@ -529,15 +468,13 @@ def collect_game_state(bot, iteration):
         "nexus": bot.structures(UnitTypeId.NEXUS).amount,
         "gateways": bot.structures(UnitTypeId.GATEWAY).amount,
         "cyberneticsCores": bot.structures(UnitTypeId.CYBERNETICSCORE).amount,
-        "stargates": bot.structures(UnitTypeId.STARGATE).amount,
-        "voidrays": bot.units(UnitTypeId.VOIDRAY).amount,
-        "photonCannons": bot.structures(UnitTypeId.PHOTONCANNON).amount,
         "supplyUsed": bot.supply_used,
         "supplyCap": bot.supply_cap,
-        "forge": bot.structures(UnitTypeId.FORGE).amount,
-        "sentry": bot.structures(UnitTypeId.SENTRY).amount,
         "assimilator": bot.structures(UnitTypeId.ASSIMILATOR).ready.amount,
-        "totalAssimilatorHarvesters": sum(a.assigned_harvesters for a in bot.structures(UnitTypeId.ASSIMILATOR).ready)
+        "totalAssimilatorHarvesters": sum(a.assigned_harvesters for a in bot.structures(UnitTypeId.ASSIMILATOR).ready),
+        "zealot" : bot.units(UnitTypeId.ZEALOT).amount,
+        "stalker" : bot.units(UnitTypeId.STALKER).amount,
+        "supplyDifferenceUsedCap" : bot.supply_cap - bot.supply_used,
     }
 
 
@@ -547,7 +484,7 @@ try:
     maps.get("AcropolisLE"),
     [Bot(Race.Protoss, HauptBot(HOST, PORT)), 
     Computer(Race.Terran, Difficulty.Easy)],
-    realtime=False
+    realtime=True
 )
 except aiohttp.client_exceptions.ClientConnectionError:
     print("Verbindung wurde geschlossen, vermutlich Spielabbruch.")
