@@ -294,7 +294,7 @@ class HauptBot(BotAI):
         
 ##### Build Methoden:
     async def build_Nexus(self):
-        print("Wenn das Fall Baue Nexus, dann soll er hier rein.")
+        print("Baue Nexus.")
         if not self.townhalls:
             # Wähle den besten Startort für einen neuen Nexus
             expansion_location = await self.get_next_expansion()
@@ -302,25 +302,44 @@ class HauptBot(BotAI):
                 await self.build(UnitTypeId.NEXUS, near=expansion_location)
     
     async def build_Pylon(self):
-        print("Wenn das Fall Baue Pylon, dann soll er hier rein.")
-        if self.townhalls:  # Sicherstellen, dass wir eine Nexus-Basis haben
+        print("Baue Pylon.")
+        if self.townhalls and self.can_afford(UnitTypeId.PYLON):
             nexus = self.townhalls.random
-            
-            if self.can_afford(UnitTypeId.PYLON):
-                pylon_position = nexus.position.towards(self.game_info.map_center, distance=8)
-                await self.build(UnitTypeId.PYLON, near=pylon_position)
+            pylon_position = nexus.position.towards(self.game_info.map_center, distance=8)
+
+            # 1️⃣ Zuerst einen idle Arbeiter nehmen
+            builder = self.workers.idle.random_or(None)
+
+            # 2️⃣ Falls keiner idle ist, nimm den nächstgelegenen von den Mineralien
+            if builder is None:
+                builder = self.workers.gathering.closest_to(nexus) if self.workers.gathering else None
+
+            # 3️⃣ Falls wir einen Arbeiter gefunden haben, schicke ihn zum Bau
+            if builder:
+                builder.move(pylon_position)  # Schicke den Arbeiter zur Bauposition
+                await self.build(UnitTypeId.PYLON, near=pylon_position)  # Baue Pylon
 
     async def build_Gateway(self):
-        print("Wenn das Fall Baue Gateway, dann soll er hier rein.")
-        if self.townhalls:  # Sicherstellen, dass wir eine Nexus-Basis haben
+        print("Baue Gateway.")
+        if self.townhalls and self.structures(UnitTypeId.PYLON).ready and self.can_afford(UnitTypeId.GATEWAY):
             nexus = self.townhalls.random
+            gateway_position = nexus.position.towards(self.game_info.map_center, distance=12)
 
-            if self.structures(UnitTypeId.PYLON).ready and self.can_afford(UnitTypeId.GATEWAY):
-                gateway_position = nexus.position.towards(self.game_info.map_center, distance=12)
-                await self.build(UnitTypeId.GATEWAY, near=gateway_position)
+            # 1️⃣ Zuerst einen idle Arbeiter nehmen
+            builder = self.workers.idle.random_or(None)
+
+            # 2️⃣ Falls keiner idle ist, nimm den nächstgelegenen von den Mineralien
+            if builder is None:
+                builder = self.workers.gathering.closest_to(nexus) if self.workers.gathering else None
+
+            # 3️⃣ Falls wir einen Arbeiter gefunden haben, schicke ihn zum Bau
+            if builder:
+                builder.move(gateway_position)  # Schicke den Arbeiter zur Bauposition
+                await self.build(UnitTypeId.GATEWAY, near=gateway_position)  # Baue Gateway
+
 
     async def build_Assimilator(self):
-        print("Wenn das Fall Baue Assimilator für Gas, dann soll er hier rein.")
+        print("Bause Assimilator.")
         if self.townhalls:  # Sicherstellen, dass wir eine Nexus-Basis haben
             nexus = self.townhalls.random
         
@@ -332,7 +351,7 @@ class HauptBot(BotAI):
                                 await self.build(UnitTypeId.ASSIMILATOR, near=vespene)
 
     async def build_CyberneticsCore(self):
-        print("Wenn das Fall Baue CyberneticsCore, dann soll er hier rein.")
+        print("Baue CyberneticsCore.")
         if self.townhalls:  # Sicherstellen, dass wir eine Nexus-Basis haben
             nexus = self.townhalls.random
 
@@ -340,37 +359,19 @@ class HauptBot(BotAI):
                 core_position = nexus.position.towards(self.game_info.map_center, distance=10)
                 await self.build(UnitTypeId.CYBERNETICSCORE, near=core_position)
 
-    async def build_Stargate(self):
-        print("Wenn das Fall Baue Stargate, dann soll er hier rein.")
-        if self.townhalls:  # Sicherstellen, dass wir eine Nexus-Basis haben
-            nexus = self.townhalls.random
-
-            if self.structures(UnitTypeId.CYBERNETICSCORE).ready and not self.structures(UnitTypeId.STARGATE) and self.can_afford(UnitTypeId.STARGATE):
-                stargate_position = nexus.position.towards(self.game_info.map_center, distance=15)
-                await self.build(UnitTypeId.STARGATE, near=stargate_position)
-
-    async def build_Forge(self):
-        print("Wenn das Fall Baue Forge, dann soll er hier rein.")
-        if self.townhalls:  # Sicherstellen, dass wir eine Nexus-Basis haben
-            nexus = self.townhalls.random
-
-            if self.structures(UnitTypeId.FORGE).amount < 4 and self.can_afford(UnitTypeId.FORGE):
-                forge_position = nexus.position.towards(self.game_info.map_center, distance=8)
-                await self.build(UnitTypeId.FORGE, near=forge_position)
-
 ##### Troup Methoden:
     # Arbeiter
     async def troup_Worker(self):
-        print("Wenn das hier kommt, dann werden Arbeiter ausgebildet.")
+        print("Bilde Arbeiter aus.")
         # Arbeiter trainieren, wenn genug Ressourcen vorhanden sind
-        if self.can_afford(UnitTypeId.PROBE) and self.units(UnitTypeId.PROBE).amount < 100:
+        if self.can_afford(UnitTypeId.PROBE):
             logging.debug("Arbeiter wird trainiert.")
             for sg in self.structures(UnitTypeId.NEXUS).ready.idle:
                 sg.train(UnitTypeId.PROBE)
             
 
     async def troup_Worker_Assimilator(self):
-        print("Wenn dieser Fall auftritt, sollen Arbeiter zu Assimilator eingeteilt werden.")#
+        print("Weise Arbeiter Assimilator zu.")#
         for assimilator in self.structures(UnitTypeId.ASSIMILATOR).ready:
                 needed_harvesters = 3
                 current_harvesters = assimilator.assigned_harvesters
@@ -392,7 +393,7 @@ class HauptBot(BotAI):
     # Bodentruppen:
 
     async def troup_Zealot(self):
-        print("In diesem Fall soll ein Zealot erschaffen werden")
+        print("bilde Zealots aus.")
         if self.can_afford(UnitTypeId.ZEALOT):
             logging.debug("Zealot wird trainiert.")
             for sg in self.structures(UnitTypeId.GATEWAY).ready.idle:
@@ -403,7 +404,7 @@ class HauptBot(BotAI):
             zealot.move(self.main_base_ramp.top_center)
 
     async def troup_Stalker(self):
-        print("In diesem Fall soll ein Stalker erschaffen werden")
+        print("bilde Stalker aus.")
         if self.can_afford(UnitTypeId.STALKER):
             logging.debug("Stalker wird trainiert.")
             for sg in self.structures(UnitTypeId.GATEWAY).ready.idle:
@@ -418,7 +419,7 @@ class HauptBot(BotAI):
 
 ##### Attack Methoden:      
     async def attack_Zealot(self):
-        print("Wenn dieser Fall eintritt, sollen die Zealots zum Angriff übergehen.")
+        print("Zealots zum Angriff.")
         zealots = self.units(UnitTypeId.ZEALOT).idle
         if zealots.amount > 10:
             logging.debug("Zealots Angreifen!")
@@ -432,7 +433,7 @@ class HauptBot(BotAI):
                     z.attack(explore_point)
     
     async def attack_Stalker(self):
-        print("Wenn dieser Fall eintritt, sollen die Stalker zum Angriff übergehen.")
+        print("Stalker zum Angriff.")
         stalker = self.units(UnitTypeId.STALKER).idle
         if stalker.amount > 10:
             logging.debug("Zealots Angreifen!")
@@ -446,27 +447,26 @@ class HauptBot(BotAI):
                     s.attack(explore_point)
     
     async def attack_Zealots_Stalker(self):
-        print("Wenn dieser Fall eintritt, sollen die Zealots und Stalker zum Angriff übergehen.")
+        print("Zealots und Stalker zum Angriff.")
         
         # ALLE Zealots und Stalker in die Angriffswelle aufnehmen
         zealots = self.units(UnitTypeId.ZEALOT)
         stalkers = self.units(UnitTypeId.STALKER)
 
-        if zealots.amount > 10 and stalkers.amount > 10:
-            logging.debug("Zealots und Stalker greifen an!")
+        logging.debug("Zealots und Stalker greifen an!")
 
-            enemy_units = self.enemy_units | self.enemy_structures
+        enemy_units = self.enemy_units | self.enemy_structures
 
-            if enemy_units:
-                # Angriff auf den nächsten Gegner
-                target = enemy_units.closest_to(zealots.center) if zealots else enemy_units.closest_to(stalkers.center)
-                for unit in zealots + stalkers:
-                    unit.attack(target)
-            else:
-                # Falls keine Gegner gefunden werden, erkunden
-                explore_point = self.random_location_variance(self.enemy_start_locations[0])
-                for unit in zealots + stalkers:
-                    unit.attack(explore_point)
+        if enemy_units:
+            # Angriff auf den nächsten Gegner
+            target = enemy_units.closest_to(zealots.center) if zealots else enemy_units.closest_to(stalkers.center)
+            for unit in zealots + stalkers:
+                unit.attack(target)
+        else:
+            # Falls keine Gegner gefunden werden, erkunden
+            explore_point = self.random_location_variance(self.enemy_start_locations[0])
+            for unit in zealots + stalkers:
+                unit.attack(explore_point)
 
 
 
@@ -502,7 +502,7 @@ try:
     maps.get("AcropolisLE"),
     [Bot(Race.Protoss, HauptBot(HOST, PORT)), 
     Computer(Race.Terran, Difficulty.Easy)],
-    realtime=False
+    realtime=True
 )
 except aiohttp.client_exceptions.ClientConnectionError:
     print("Verbindung wurde geschlossen, vermutlich Spielabbruch.")
