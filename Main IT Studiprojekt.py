@@ -146,9 +146,6 @@ class HauptBot(BotAI):
                     if category == "build_Nexus":
                         logging.info("Nexus wird gebaut!")
                         await self.build_Nexus()
-                    # elif (self.supply_cap - self.supply_used) < 5:
-                    #    logging.info("Baue Pylon, da sonst kein weiteres Vorgehen möglich!")
-                    #    await self.build_Pylon()
                     elif category == "build_Pylon":
                         logging.info("Pylon wird gebaut!")
                         await self.build_Pylon()
@@ -468,8 +465,6 @@ class HauptBot(BotAI):
             for unit in zealots + stalkers:
                 unit.attack(explore_point)
 
-
-
 #####################################################################
 
 # === Hilfsfunktionen ===
@@ -502,7 +497,7 @@ try:
     maps.get("AcropolisLE"),
     [Bot(Race.Protoss, HauptBot(HOST, PORT)), 
     Computer(Race.Terran, Difficulty.Easy)],
-    realtime=True
+    realtime=False
 )
 except aiohttp.client_exceptions.ClientConnectionError:
     print("Verbindung wurde geschlossen, vermutlich Spielabbruch.")
