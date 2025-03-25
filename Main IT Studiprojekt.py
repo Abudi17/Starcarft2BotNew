@@ -110,8 +110,8 @@ class HauptBot(BotAI):
         self.persistent_client = PersistentClient(host, port)
 
         # Flags für die einmalige Ausführung und Verzögerung
-        self.initial_structure_built = False  # Ob die Grundstruktur gebaut wurde
-        self.initial_structure_completed = False  # Ob die Verzögerung abgeschlossen ist
+        self.initial_structure_built = True  # Ob die Grundstruktur gebaut wurde
+        self.initial_structure_completed = True  # Ob die Verzögerung abgeschlossen ist
             
     #Ist für die Position der Suche des Gegeners der Angriffstruppen
     def random_location_variance(self, location: Point2, variance: float = 30):
@@ -123,9 +123,6 @@ class HauptBot(BotAI):
     # Aktuell funktioniert es, brauche nur mehr Fälle und dann müssen die einzelnen Methoden angepasst werden
     async def on_step(self, iteration: int):
         # Grundstruktur bauen
-        if not self.initial_structure_built:
-            await self.build_initial_structure()
-            asyncio.create_task(self.delay_rest_of_on_step())
 
         if self.initial_structure_completed:
             # Es wird eine Höhere Iteration gebraucht, damit er nicht 20 Fälle gleichzeitig ausführt und den gebäuden erstmal zeit gibt bis die fertig sind
@@ -189,100 +186,7 @@ class HauptBot(BotAI):
                         logging.info(f"Unbekannte Kategorie: {category}")
                 else:
                     logging.warning("Keine Kategorien empfangen oder Antwort ist leer.")
-    
-    async def delay_rest_of_on_step(self):
-        try:
-            # Überprüfen, ob die Nachricht schon geloggt wurde
-            if not hasattr(self, 'log_message_shown'):
-                self.log_message_shown = False
 
-            # Log-Nachricht einmalig ausgeben
-            if not self.log_message_shown:
-                logging.info("Verzögerung gestartet: Warte 10 Sekunden, um die Grundstrucktur zu bauen.")
-                self.log_message_shown = True  # Flag setzen, damit die Nachricht nicht erneut ausgegeben wird
-
-            # Nach der Verzögerung
-            self.initial_structure_built = True
-            self.initial_structure_completed = True  # Verzögerung abgeschlossen
-        except Exception as e:
-            logging.error(f"Fehler während der Verzögerung: {e}")
-
-    # WIRD AKTUELL NICHT VERWENDET: WAR INITIAL DA FÜR DIE GRUNDSTRUKTUR: WURDE IM FINALEN STATUS RAUSGENOMMEN! CODE BLEIBT DENNOCH FÜR ZUKUNFT
-    async def build_initial_structure(self):
-        """Baut die Grundstruktur für Protoss und sorgt für Ressourcenmanagement."""
-        # Überprüfen, ob ein Nexus vorhanden ist. Falls nicht, baue einen neuen Nexus.
-        if self.townhalls:  # Sicherstellen, dass wir eine Nexus-Basis haben
-            nexus = self.townhalls.random  # Wähle einen zufälligen Nexus für die Aktionen
-
-            # 1. Arbeiter trainieren, falls benötigt (Es werden bei der Gundstruktur extra 2 Weniger als Möglich angegeben, da es somit im Verlauf optimal ist)
-            optimal_workers = len(self.townhalls) * 19
-            if self.workers.amount < optimal_workers and nexus.is_idle and self.can_afford(UnitTypeId.PROBE):
-                nexus.train(UnitTypeId.PROBE)
-
-            # 2. Pylon bauen
-            if self.structures(UnitTypeId.PYLON).amount < 2 and self.can_afford(UnitTypeId.PYLON):
-                pylon_position = nexus.position.towards(self.game_info.map_center, distance=10)
-                await self.build(UnitTypeId.PYLON, near=pylon_position)
-
-            # 3. Gateway bauen
-            if self.structures(UnitTypeId.PYLON).ready and not self.structures(UnitTypeId.GATEWAY) and self.can_afford(UnitTypeId.GATEWAY):
-                gateway_position = nexus.position.towards(self.game_info.map_center, distance=12)
-                await self.build(UnitTypeId.GATEWAY, near=gateway_position)
-
-            # 4. Assimilator bauen
-            if self.structures(UnitTypeId.PYLON).ready and self.structures(UnitTypeId.GATEWAY).ready:
-                assimilators_built = self.structures(UnitTypeId.ASSIMILATOR).amount + self.already_pending(UnitTypeId.ASSIMILATOR)
-    
-                # Baue genau zwei Assimilatoren
-                if assimilators_built < 2:
-                    for vespene in self.vespene_geyser.closer_than(15, nexus):
-                        if not self.structures(UnitTypeId.ASSIMILATOR).closer_than(1, vespene) and not self.already_pending(UnitTypeId.ASSIMILATOR):
-                            if self.can_afford(UnitTypeId.ASSIMILATOR):
-                                await self.build(UnitTypeId.ASSIMILATOR, near=vespene)
-
-            # 4.1 Gas abbauen (Arbeiter zu fertigen Assimilatoren schicken)
-            if self.structures(UnitTypeId.ASSIMILATOR).ready.amount == 2:  # Sicherstellen, dass zwei Assimilatoren bereit sind
-                for assimilator in self.structures(UnitTypeId.ASSIMILATOR).ready:
-                    # Berechne, wie viele Arbeiter noch benötigt werden
-                    needed_harvesters = 3
-                    if needed_harvesters > 0:
-                    # Hole so viele Arbeiter wie benötigt, entweder von idle oder anderen Quellen
-                        idle_workers = self.workers.idle
-                        if idle_workers:
-                            for _ in range(needed_harvesters):
-                                if idle_workers.exists:  # Sicherstellen, dass noch freie Arbeiter verfügbar sind
-                                    idle_workers.random.gather(assimilator)
-
-            # 5. Cybernetics Core bauen
-            if self.structures(UnitTypeId.GATEWAY).ready and not self.structures(UnitTypeId.CYBERNETICSCORE) and self.can_afford(UnitTypeId.CYBERNETICSCORE):
-                core_position = nexus.position.towards(self.game_info.map_center, distance=10)
-                await self.build(UnitTypeId.CYBERNETICSCORE, near=core_position)
-
-            # 6. Stargate bauen
-            if self.structures(UnitTypeId.CYBERNETICSCORE).ready and not self.structures(UnitTypeId.STARGATE) and self.can_afford(UnitTypeId.STARGATE):
-                stargate_position = nexus.position.towards(self.game_info.map_center, distance=15)
-                await self.build(UnitTypeId.STARGATE, near=stargate_position)
-
-            # 7. Photon Cannons bauen
-            if self.structures(UnitTypeId.FORGE).ready:
-                cannon_count = self.structures(UnitTypeId.PHOTONCANNON).amount
-                while cannon_count < 4 and self.can_afford(UnitTypeId.PHOTONCANNON):
-                    cannon_position = await self.find_placement(
-                        UnitTypeId.PHOTONCANNON,
-                        near=nexus.position,
-                        max_distance=15,
-                        random_alternative=True
-                    )
-                    if cannon_position:
-                        await self.build(UnitTypeId.PHOTONCANNON, near=cannon_position)
-                        cannon_count += 1
-                    else:
-                        break
-
-            # 8. Forge bauen, falls noch nicht vorhanden
-            if not self.structures(UnitTypeId.FORGE) and self.can_afford(UnitTypeId.FORGE):
-                forge_position = nexus.position.towards(self.game_info.map_center, distance=8)
-                await self.build(UnitTypeId.FORGE, near=forge_position) 
         
 ##### Build Methoden:
     async def build_Nexus(self):
