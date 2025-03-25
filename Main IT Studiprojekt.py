@@ -50,7 +50,7 @@ class PersistentClient:
                 logging.debug("Spielstatus erfolgreich gesendet.")
             except Exception as e:
                 logging.error(f"Fehler beim Senden des Spielstatus: {e}")
-                self.handle_disconnection()  # Behandlung bei Verbindungsfehler
+                self.handle_disconnection() 
         else:
             logging.warning("Socket nicht verbunden. Keine Daten gesendet.")
             self.terminate_game()
@@ -113,11 +113,11 @@ class HauptBot(BotAI):
         self.initial_structure_built = False  # Ob die Grundstruktur gebaut wurde
         self.initial_structure_completed = False  # Ob die Verzögerung abgeschlossen ist
             
-    #Ist für die Position der Suche des Gegeners der Angriffstruppen (aktuell Voidrays)
+    #Ist für die Position der Suche des Gegeners der Angriffstruppen
     def random_location_variance(self, location: Point2, variance: float = 30):
         """Generiert eine zufällige Variation für eine gegebene Position."""
-        x = location.x + random.uniform(-variance, variance)  # Verwende random.uniform()
-        y = location.y + random.uniform(-variance, variance)  # Verwende random.uniform()
+        x = location.x + random.uniform(-variance, variance)  
+        y = location.y + random.uniform(-variance, variance)  
         return Point2((x, y))
 
     # Aktuell funktioniert es, brauche nur mehr Fälle und dann müssen die einzelnen Methoden angepasst werden
@@ -201,15 +201,13 @@ class HauptBot(BotAI):
                 logging.info("Verzögerung gestartet: Warte 10 Sekunden, um die Grundstrucktur zu bauen.")
                 self.log_message_shown = True  # Flag setzen, damit die Nachricht nicht erneut ausgegeben wird
 
-            # await asyncio.sleep(10)
-
             # Nach der Verzögerung
             self.initial_structure_built = True
             self.initial_structure_completed = True  # Verzögerung abgeschlossen
         except Exception as e:
             logging.error(f"Fehler während der Verzögerung: {e}")
 
-    # Das hier ist für die Grundstruktur, also damit etwas deff und Gebäude am Spielbeginn vorhanden sind, um Entscheidungen trffen zu können
+    # WIRD AKTUELL NICHT VERWENDET: WAR INITIAL DA FÜR DIE GRUNDSTRUKTUR: WURDE IM FINALEN STATUS RAUSGENOMMEN! CODE BLEIBT DENNOCH FÜR ZUKUNFT
     async def build_initial_structure(self):
         """Baut die Grundstruktur für Protoss und sorgt für Ressourcenmanagement."""
         # Überprüfen, ob ein Nexus vorhanden ist. Falls nicht, baue einen neuen Nexus.
@@ -300,15 +298,10 @@ class HauptBot(BotAI):
         if self.townhalls and self.can_afford(UnitTypeId.PYLON):
             nexus = self.townhalls.random
             pylon_position = nexus.position.towards(self.game_info.map_center, distance=8)
-
-            # 1️⃣ Zuerst einen idle Arbeiter nehmen
             builder = self.workers.idle.random_or(None)
-
-            # 2️⃣ Falls keiner idle ist, nimm den nächstgelegenen von den Mineralien
             if builder is None:
                 builder = self.workers.gathering.closest_to(nexus) if self.workers.gathering else None
 
-            # 3️⃣ Falls wir einen Arbeiter gefunden haben, schicke ihn zum Bau
             if builder:
                 builder.move(pylon_position)  # Schicke den Arbeiter zur Bauposition
                 await self.build(UnitTypeId.PYLON, near=pylon_position)  # Baue Pylon
@@ -319,14 +312,11 @@ class HauptBot(BotAI):
             nexus = self.townhalls.random
             gateway_position = nexus.position.towards(self.game_info.map_center, distance=12)
 
-            # 1️⃣ Zuerst einen idle Arbeiter nehmen
             builder = self.workers.idle.random_or(None)
 
-            # 2️⃣ Falls keiner idle ist, nimm den nächstgelegenen von den Mineralien
             if builder is None:
                 builder = self.workers.gathering.closest_to(nexus) if self.workers.gathering else None
 
-            # 3️⃣ Falls wir einen Arbeiter gefunden haben, schicke ihn zum Bau
             if builder:
                 builder.move(gateway_position)  # Schicke den Arbeiter zur Bauposition
                 await self.build(UnitTypeId.GATEWAY, near=gateway_position)  # Baue Gateway
